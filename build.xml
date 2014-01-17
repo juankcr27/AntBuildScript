@@ -1,0 +1,108 @@
+<?xml version="1.0"?>
+<project name="BuildMe" default="main" basedir=".">
+	
+	<taskdef resource="net/sf/antcontrib/antcontrib.properties">
+		<classpath>
+	    	<pathelement location="lib/antcontrib.jar"/>
+	  	</classpath>
+	</taskdef>
+	    
+  	<!-- Sets variables which can later be used. -->
+  	<!-- The value of a property is accessed via ${} -->
+	<property file="config.properties"/>
+	<tstamp> 
+		<format property="file-name" pattern="yyyyMMddhhmm" locale="en,UK"/> 
+  	</tstamp> 
+  	  
+	<target name="main">		
+		<trycatch>
+			<try>
+				<!-- Deletes the existing build, docs and dist directory -->
+			  	<delete dir="${build.dir}" />
+				<delete dir="builds" />				
+			  	
+				<!-- Creates the  build, docs and dist directory -->
+			  	<mkdir dir="${build.dir}" />
+				<mkdir dir="builds" />
+			  	
+			  	<!-- Compile -->
+			  	<javac srcdir="${src.dir}" destdir="${build.dir}" includeantruntime="false"></javac>			  	
+			  	
+			  	<!-- JUnit Test -->		
+			  	<path id="classpath.test">
+			  		<pathelement location="lib/junit-4.11.jar" />
+			  		<pathelement location="lib/hamcrest-core-1.3.jar" />			  		
+			  		<pathelement location="${test.dir}" />	  	
+			  	</path>
+			  		
+		  		<path id="classpath.bin">
+		  			<pathelement location="lib/junit-4.11.jar" />
+		  			<pathelement location="lib/hamcrest-core-1.3.jar" />		  				  			
+		  			<pathelement location="bin" />	  	
+		  		</path>
+			  		  
+				<javac srcdir="${src.dir};${test.dir}" verbose="${talk}" includeantruntime="false" destdir="${build.dir}">
+			  		<classpath refid="classpath.test"/>
+			  	</javac>			
+			  		  
+			  	<junit fork="yes" haltonfailure="true">
+		  			<classpath refid="classpath.bin" />	      
+		  		    <formatter type="brief" usefile="false" />
+			  		<formatter type="plain"/> 
+		  		    <test name="com.avantica.chirripo.SubscriptionTest" />			  		
+				</junit>
+				
+			  	<!-- Create zip -->
+				<description>Main target</description>
+			  	<zip destfile="builds/BuildMe-${file-name}.zip" basedir="bin"/>
+			  					
+				<!-- Task and class loader to use email jar -->
+				<taskdef name="classloadertask" classname="org.apache.tools.ant.taskdefs.ClassloaderTask"> 
+					<classpath> 
+						<fileset dir="lib"/> 
+					</classpath> 
+				</taskdef> 
+				<path id="all.mail.cp"> 
+					<fileset dir="lib"> 
+						<include name="*.jar"/> 
+					</fileset> 
+				</path> 
+				<classloadertask classpathRef="all.mail.cp" loader="thread"/>
+				
+			  	<!-- Send Mail -->
+		  		<mail mailhost="${mailhost}" mailport="${mailport}" enableStartTLS="true" ssl="true" password="${password}" user="${user}" messagemimetype="text/html" subject="BuildMe-${file-name} SUCCESS">
+		  			<from address="${from}"/>		  	
+		  			<to address="${to}"/>
+		  			<message>The build has been completed successfully</message>		  		
+		  		</mail>				  	
+			
+			</try>
+			<catch>
+				
+				<!-- Task and class loader to use email jar -->
+				<taskdef name="classloadertask" classname="org.apache.tools.ant.taskdefs.ClassloaderTask"> 
+					<classpath> 
+						<fileset dir="lib"/> 
+					</classpath> 
+				</taskdef> 
+				<path id="all.mail.cp"> 
+					<fileset dir="lib"> 
+						<include name="*.jar"/> 
+					</fileset> 
+				</path> 
+				<classloadertask classpathRef="all.mail.cp" loader="thread"/>
+				
+		  		<mail mailhost="${mailhost}" mailport="${mailport}" enableStartTLS="true" ssl="true" password="${password}" user="${user}" messagemimetype="text/html" subject="BuildMe-${file-name} FAIL">
+		  			<from address="${from}"/>		  	
+		  			<to address="${to}"/>
+		  			<message>The build has been completed with errors</message>	
+		  			<attachments>
+		  				<fileset dir=".">
+		  			 		<include name="TEST-*.txt"/>		  			  		
+		  				</fileset>
+		  			</attachments>
+		  		</mail>	
+			</catch>			 
+		</trycatch>		
+	</target>  
+</project> 
